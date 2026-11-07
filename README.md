@@ -83,11 +83,20 @@ src
 
 ## Development workflow
 
-This project follows **trunk-based development**:
+```
+feature branch ──PR (squash)──▶ develop ──PR (senior review, merge commit)──▶ main
+```
 
-- `main` is always releasable — it must build and pass all tests.
-- Every change goes through a short-lived branch and a Pull Request.
+| Branch      | Purpose                                                       |
+|-------------|---------------------------------------------------------------|
+| `main`      | Reviewed, stable code. Updated only from `develop`.           |
+| `develop`   | Integration branch. All feature branches are merged here.     |
+| `<type>/…`  | Short-lived work branch created from `develop`.               |
+
+- Every change starts from an up-to-date `develop` and goes through a Pull Request.
+- Feature → `develop`: **squash and merge**, branch deleted afterwards.
+- `develop` → `main`: reviewed by a senior developer, merged with a **merge commit**.
+- CI must pass before any merge.
 - Branch naming: `<type>/<short-description>`, e.g. `feat/user-registration`.
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/):
   `feat`, `fix`, `docs`, `refactor`, `test`, `build`, `ci`, `chore`.
-- Pull Requests are merged with **squash and merge** and the branch is deleted afterwards.
