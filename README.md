@@ -32,7 +32,7 @@ login with JWT access tokens, password change and password reset.
 | Security       | Spring Security, OAuth2 Resource Server, JWT |
 | API docs       | springdoc-openapi (Swagger UI)               |
 | Observability  | Spring Boot Actuator, Micrometer, Prometheus |
-| Testing        | JUnit 5, Testcontainers                      |
+| Testing        | JUnit 6, Testcontainers, JaCoCo              |
 
 ## Getting started
 
@@ -46,7 +46,7 @@ No local Maven installation is needed — use the bundled wrapper (`./mvnw`).
 ### Build
 
 ```bash
-./mvnw clean package
+./mvnw clean package -DskipTests
 ```
 
 The executable JAR is created in `target/`.
@@ -57,16 +57,48 @@ The executable JAR is created in `target/`.
 ./mvnw verify
 ```
 
-Integration tests start a real PostgreSQL instance in Docker via Testcontainers.
+- Unit tests (`*Test`) run with Surefire, integration tests (`*IT`) with Failsafe.
+- Integration tests start a real PostgreSQL instance in Docker via Testcontainers.
+- The coverage report is generated at `target/site/jacoco/index.html`.
+
+Run only the fast unit tests with `./mvnw test`.
 
 ### Run locally
 
-Until Docker Compose is added, the easiest way to run the service is with a
-Testcontainers-managed database:
+1. Create your local environment file and set a database password:
 
-```bash
-./mvnw spring-boot:test-run
-```
+   ```bash
+   cp .env.example .env
+   ```
+
+   `.env` is git-ignored — never commit it. It is read by both Docker Compose and the `dev` profile.
+
+2. Start PostgreSQL:
+
+   ```bash
+   docker compose up -d
+   ```
+
+3. Run the application with the `dev` profile:
+
+   ```bash
+   ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+   ```
+
+   In IntelliJ IDEA, set **Active profiles** to `dev` in the run configuration.
+
+Stop the database with `docker compose down` (add `-v` to also delete its data).
+
+### Profiles
+
+| Profile | Purpose                | Database connection                                  |
+|---------|------------------------|------------------------------------------------------|
+| `dev`   | Local development      | Docker Compose, credentials from `.env`              |
+| `test`  | Integration tests      | Testcontainers                                       |
+| `prod`  | Production             | Environment variables `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` |
+
+The application refuses to start without an active profile. In production set
+`SPRING_PROFILES_ACTIVE=prod`. Swagger UI is enabled only in the `dev` profile.
 
 ## Project structure
 
@@ -75,10 +107,13 @@ src
 ├── main
 │   ├── java/com/authservice/authservice   # application source code
 │   └── resources
-│       ├── application.properties         # configuration
+│       ├── application.properties         # shared configuration
+│       ├── application-{dev,test,prod}.properties  # profile-specific configuration
 │       └── db/changelog                   # Liquibase migrations
 └── test
-    └── java/com/authservice/authservice   # tests
+    └── java/com/authservice/authservice   # unit (*Test) and integration (*IT) tests
+compose.yaml                               # local PostgreSQL
+.env.example                               # template for local .env
 ```
 
 ## Development workflow
