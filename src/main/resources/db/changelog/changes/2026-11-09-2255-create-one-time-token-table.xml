@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="2026-11-09-2255-create-one-time-token-table" author="marcin.barc">
+        <createTable tableName="one_time_token">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_one_time_token" nullable="false"/>
+            </column>
+            <column name="account_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_one_time_token_account"
+                             references="account(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="purpose" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="token_hash" type="varchar(64)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_one_time_token_token_hash"/>
+            </column>
+            <column name="expires_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="used_at" type="timestamp with time zone"/>
+            <column name="created_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- PostgreSQL does not index foreign keys automatically; also serves token invalidation queries -->
+        <createIndex tableName="one_time_token" indexName="idx_one_time_token_account_id_purpose">
+            <column name="account_id"/>
+            <column name="purpose"/>
+        </createIndex>
+
+        <!-- Periodic cleanup of expired tokens -->
+        <createIndex tableName="one_time_token" indexName="idx_one_time_token_expires_at">
+            <column name="expires_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
