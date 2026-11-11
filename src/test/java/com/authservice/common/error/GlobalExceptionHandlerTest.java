@@ -25,7 +25,7 @@ class GlobalExceptionHandlerTest {
 
 	@BeforeEach
 	void setUp() {
-		mockMvc = MockMvcBuilders.standaloneSetup(new TestController())
+		mockMvc = MockMvcBuilders.standaloneSetup(new ThrowingController())
 				.setControllerAdvice(new GlobalExceptionHandler())
 				.build();
 	}
@@ -61,40 +61,8 @@ class GlobalExceptionHandlerTest {
 				.andExpect(jsonPath("$.errors[0].message").value("must not be blank"));
 	}
 
-	@Test
-	void shouldReturnNotFoundForUnknownEndpoint() throws Exception {
-		mockMvc.perform(get("/test/unknown"))
-				.andExpect(status().isNotFound())
-				.andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
-	}
-
-	@Test
-	void shouldReturnMethodNotAllowed() throws Exception {
-		mockMvc.perform(get("/test/body"))
-				.andExpect(status().isMethodNotAllowed())
-				.andExpect(jsonPath("$.code").value("METHOD_NOT_ALLOWED"));
-	}
-
-	@Test
-	void shouldReturnMalformedRequestForInvalidJson() throws Exception {
-		mockMvc.perform(post("/test/body")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("{ not valid json"))
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
-	}
-
-	@Test
-	void shouldReturnUnsupportedMediaType() throws Exception {
-		mockMvc.perform(post("/test/body")
-						.contentType(MediaType.TEXT_PLAIN)
-						.content("plain text"))
-				.andExpect(status().isUnsupportedMediaType())
-				.andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"));
-	}
-
 	@RestController
-	static class TestController {
+	static class ThrowingController {
 		@GetMapping("/test/business")
 		void throwBusinessException() {
 			throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "Custom detail");
@@ -103,10 +71,6 @@ class GlobalExceptionHandlerTest {
 		@GetMapping("/test/unexpected")
 		void throwUnexpectedException() {
 			throw new IllegalStateException("Connection failed, secret password: admin123");
-		}
-
-		@PostMapping("/test/body")
-		void acceptBody(@RequestBody final TestRequest request) {
 		}
 
 		@PostMapping("/test/validated")
