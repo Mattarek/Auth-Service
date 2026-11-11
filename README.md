@@ -105,13 +105,13 @@ The application refuses to start without an active profile. In production set
 ```
 src
 ├── main
-│   ├── java/com/authservice/authservice   # application source code
+│   ├── java/com/authservice               # application source code
 │   └── resources
 │       ├── application.properties         # shared configuration
 │       ├── application-{dev,test,prod}.properties  # profile-specific configuration
 │       └── db/changelog                   # Liquibase migrations
 └── test
-    └── java/com/authservice/authservice   # unit (*Test) and integration (*IT) tests
+    └── java/com/authservice               # unit (*Test) and integration (*IT) tests
 compose.yaml                               # local PostgreSQL
 .env.example                               # template for local .env
 ```
