@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,8 +33,11 @@ class GlobalExceptionHandlerTest {
 
 	@Test
 	void shouldMapBusinessExceptionToProblemDetail() throws Exception {
-		mockMvc.perform(get("/test/business"))
-				.andExpect(status().isNotFound())
+		// when
+		final ResultActions result = mockMvc.perform(get("/test/business"));
+
+		// then
+		result.andExpect(status().isNotFound())
 				.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
 				.andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"))
 				.andExpect(jsonPath("$.title").value("Resource not found"))
@@ -42,54 +46,78 @@ class GlobalExceptionHandlerTest {
 	}
 
 	@Test
-	void shouldHideDetailsOfUnexpectedException() throws Exception {
-		mockMvc.perform(get("/test/unexpected"))
-				.andExpect(status().isInternalServerError())
+	void shouldHideDetails_whenUnexpectedExceptionOccurs() throws Exception {
+		// when
+		final ResultActions result = mockMvc.perform(get("/test/unexpected"));
+
+		// then
+		result.andExpect(status().isInternalServerError())
 				.andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
 				.andExpect(jsonPath("$.detail").value("An unexpected error occurred"))
 				.andExpect(content().string(not(containsString("secret"))));
 	}
 
 	@Test
-	void shouldReturnFieldErrorsForInvalidRequest() throws Exception {
-		mockMvc.perform(post("/test/validated")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("{\"name\": \"\"}"))
-				.andExpect(status().isBadRequest())
+	void shouldReturnFieldErrors_whenRequestIsInvalid() throws Exception {
+		// given
+		final String invalidBody = "{\"name\": \"\"}";
+
+		// when
+		final ResultActions result = mockMvc.perform(post("/test/validated")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(invalidBody));
+
+		// then
+		result.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
 				.andExpect(jsonPath("$.errors[0].field").value("name"))
 				.andExpect(jsonPath("$.errors[0].message").value("must not be blank"));
 	}
 
 	@Test
-	void shouldReturnNotFoundForUnknownEndpoint() throws Exception {
-		mockMvc.perform(get("/test/unknown"))
-				.andExpect(status().isNotFound())
+	void shouldReturnNotFound_whenEndpointDoesNotExist() throws Exception {
+		// when
+		final ResultActions result = mockMvc.perform(get("/test/unknown"));
+
+		// then
+		result.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
 	}
 
 	@Test
-	void shouldReturnMethodNotAllowed() throws Exception {
-		mockMvc.perform(get("/test/body"))
-				.andExpect(status().isMethodNotAllowed())
+	void shouldReturnMethodNotAllowed_whenHttpMethodIsNotSupported() throws Exception {
+		// when
+		final ResultActions result = mockMvc.perform(get("/test/body"));
+
+		// then
+		result.andExpect(status().isMethodNotAllowed())
 				.andExpect(jsonPath("$.code").value("METHOD_NOT_ALLOWED"));
 	}
 
 	@Test
-	void shouldReturnMalformedRequestForInvalidJson() throws Exception {
-		mockMvc.perform(post("/test/body")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("{ not valid json"))
-				.andExpect(status().isBadRequest())
+	void shouldReturnMalformedRequest_whenJsonIsInvalid() throws Exception {
+		// given
+		final String malformedJson = "{ not valid json";
+
+		// when
+		final ResultActions result = mockMvc.perform(post("/test/body")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(malformedJson));
+
+		// then
+		result.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
 	}
 
 	@Test
-	void shouldReturnUnsupportedMediaType() throws Exception {
-		mockMvc.perform(post("/test/body")
-						.contentType(MediaType.TEXT_PLAIN)
-						.content("plain text"))
-				.andExpect(status().isUnsupportedMediaType())
+	void shouldReturnUnsupportedMediaType_whenContentTypeIsNotJson() throws Exception {
+		// when
+		final ResultActions result = mockMvc.perform(post("/test/body")
+				.contentType(MediaType.TEXT_PLAIN)
+				.content("plain text"));
+
+		// then
+		result.andExpect(status().isUnsupportedMediaType())
 				.andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"));
 	}
 
