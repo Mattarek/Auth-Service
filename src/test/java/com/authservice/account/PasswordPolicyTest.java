@@ -2,50 +2,111 @@ package com.authservice.account;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class PasswordPolicyTest {
+class PasswordPolicyTest {
 	private static final String EMAIL = "jan@example.com";
+	private static final String LENGTH_VIOLATION = "must be between 12 and 128 characters";
+
 	private final PasswordPolicy policy = new PasswordPolicy(new PasswordPolicyProperties(12, 128, true, true));
 
 	@Test
-	void shouldAcceptValidPassword() {
-		assertThat(policy.validate("correcthorse1", EMAIL)).isEmpty();
+	void shouldAcceptPassword_whenAllRulesAreMet() {
+		// given
+		final String password = "correcthorse1";
+
+		// when
+		final List<String> violations = policy.validate(password, EMAIL);
+
+		// then
+		assertThat(violations).isEmpty();
 	}
 
 	@Test
-	void shouldRejectTooShortPassword() {
-		assertThat(policy.validate("short1", EMAIL)).containsExactly("must be between 12 and 128 characters");
+	void shouldRejectPassword_whenShorterThanMinLength() {
+		// given
+		final String password = "short1";
+
+		// when
+		final List<String> violations = policy.validate(password, EMAIL);
+
+		// then
+		assertThat(violations).containsExactly(LENGTH_VIOLATION);
 	}
 
 	@Test
-	void shouldRejectTooLongPassword() {
-		assertThat(policy.validate("a1".repeat(65), EMAIL)).containsExactly("must be between 12 and 128 characters");
+	void shouldRejectPassword_whenLongerThanMaxLength() {
+		// given
+		final String password = "a1".repeat(65);
+
+		// when
+		final List<String> violations = policy.validate(password, EMAIL);
+
+		// then
+		assertThat(violations).containsExactly(LENGTH_VIOLATION);
 	}
 
 	@Test
-	void shouldRequireDigit() {
-		assertThat(policy.validate("onlyletterspassword", EMAIL)).containsExactly("must contain at least one digit");
+	void shouldRejectPassword_whenItHasNoDigit() {
+		// given
+		final String password = "onlyletterspassword";
+
+		// when
+		final List<String> violations = policy.validate(password, EMAIL);
+
+		// then
+		assertThat(violations).containsExactly("must contain at least one digit");
 	}
 
 	@Test
-	void shouldRequireLetter() {
-		assertThat(policy.validate("123456789012", EMAIL)).containsExactly("must contain at least one letter");
+	void shouldRejectPassword_whenItHasNoLetter() {
+		// given
+		final String password = "123456789012";
+
+		// when
+		final List<String> violations = policy.validate(password, EMAIL);
+
+		// then
+		assertThat(violations).containsExactly("must contain at least one letter");
 	}
 
 	@Test
-	void shouldRejectPasswordEqualToEmailIgnoringCase() {
-		assertThat(policy.validate("JAN1@example.com", "jan1@example.com")).containsExactly("must not be the same as email");
+	void shouldRejectPassword_whenEqualToEmailIgnoringCase() {
+		// given
+		final String email = "jan1@example.com";
+		final String password = "JAN1@example.com";
+
+		// when
+		final List<String> violations = policy.validate(password, email);
+
+		// then
+		assertThat(violations).containsExactly("must not be the same as email");
 	}
 
 	@Test
-	void shouldReportAllViolationsAtOnce() {
-		assertThat(policy.validate("abc", EMAIL)).hasSize(2);
+	void shouldReportAllViolations_whenSeveralRulesAreBroken() {
+		// given
+		final String password = "abc";
+
+		// when
+		final List<String> violations = policy.validate(password, EMAIL);
+
+		// then
+		assertThat(violations).containsExactlyInAnyOrder(LENGTH_VIOLATION, "must contain at least one digit");
 	}
 
 	@Test
-	void shouldSkipDigitRuleWhenDisabled() {
-		final PasswordPolicy lenient = new PasswordPolicy(new PasswordPolicyProperties(12, 128, true, false));
-		assertThat(lenient.validate("onlyletterspassword", EMAIL)).isEmpty();
+	void shouldAcceptPasswordWithoutDigit_whenDigitRuleIsDisabled() {
+		// given
+		final PasswordPolicy lenientPolicy = new PasswordPolicy(new PasswordPolicyProperties(12, 128, true, false));
+		final String password = "onlyletterspassword";
+
+		// when
+		final List<String> violations = lenientPolicy.validate(password, EMAIL);
+
+		// then
+		assertThat(violations).isEmpty();
 	}
 }
