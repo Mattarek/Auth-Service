@@ -20,6 +20,8 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	private static final String INTERNAL_ERROR_DETAIL = "An unexpected error occurred";
+	private static final String VALIDATION_FAILED_DETAIL = "Request contains invalid fields";
+
 	private static final Map<Integer, ErrorCode> ERROR_CODES_BY_STATUS = Map.of(
 			HttpStatus.NOT_FOUND.value(), ErrorCode.RESOURCE_NOT_FOUND,
 			HttpStatus.METHOD_NOT_ALLOWED.value(), ErrorCode.METHOD_NOT_ALLOWED,
@@ -36,6 +38,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 			return errorCode;
 		}
 		return statusCode.is5xxServerError() ? ErrorCode.INTERNAL_ERROR : ErrorCode.MALFORMED_REQUEST;
+	}
+
+	@ExceptionHandler(FieldValidationException.class)
+	ProblemDetail handleFieldValidationException(final FieldValidationException ex) {
+		log.debug("Field validation failed: {}", ex.getViolations());
+		final ProblemDetail problem = toProblemDetail(ErrorCode.VALIDATION_FAILED, VALIDATION_FAILED_DETAIL);
+		problem.setProperty("errors", ex.getViolations());
+		return problem;
 	}
 
 	@ExceptionHandler(BusinessException.class)
@@ -83,7 +93,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
 		final ProblemDetail problem = toProblemDetail(
 				ErrorCode.VALIDATION_FAILED,
-				"Request contains invalid fields"
+				VALIDATION_FAILED_DETAIL
 		);
 
 		problem.setProperty("errors", violations);
