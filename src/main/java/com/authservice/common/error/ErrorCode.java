@@ -13,7 +13,9 @@ public enum ErrorCode {
 	METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "Method not allowed"),
 	INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error"),
 	UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Unsupported media type"),
-	EMAIL_ALREADY_TAKEN(HttpStatus.CONFLICT, "Email already taken");
+	EMAIL_ALREADY_TAKEN(HttpStatus.CONFLICT, "Email already taken"),
+	TOKEN_INVALID(HttpStatus.BAD_REQUEST, "Token is invalid"),
+	TOKEN_EXPIRED(HttpStatus.GONE, "Token has expired");
 
 	private final HttpStatus status;
 	private final String title;
