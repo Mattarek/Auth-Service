@@ -14,10 +14,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 class AccountController {
 	private final RegistrationService registrationService;
+	private final ActivationService activationService;
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	AccountResponse register(@Valid @RequestBody final RegisterAccountRequest request) {
 		return AccountResponse.from(registrationService.register(request.email(), request.password()));
+	}
+
+	@PostMapping("/activation")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	void activate(@Valid @RequestBody final ActivateAccountRequest request) {
+		activationService.activate(request.token());
 	}
 }

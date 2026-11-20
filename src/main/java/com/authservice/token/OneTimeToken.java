@@ -54,4 +54,20 @@ public class OneTimeToken {
 		token.expiresAt = now.plus(validity);
 		return token;
 	}
+
+	public boolean isUsed() {
+		return usedAt != null;
+	}
+
+	public boolean isExpiredAt(final Instant now) {
+		return !now.isBefore(expiresAt);
+	}
+
+	public void markUsed(final Instant now) {
+		Objects.requireNonNull(now, "now must not be null");
+		if (isUsed()) {
+			throw new IllegalStateException("Token has already been used");
+		}
+		usedAt = now;
+	}
 }
