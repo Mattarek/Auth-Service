@@ -16,9 +16,18 @@ import java.time.Instant;
 @Service
 @RequiredArgsConstructor
 public class ActivationService {
+	private final AccountRepository accountRepository;
 	private final OneTimeTokenRepository oneTimeTokenRepository;
+	private final ActivationTokenIssuer activationTokenIssuer;
 	private final TokenGenerator tokenGenerator;
 	private final Clock clock;
+
+	@Transactional
+	public void resendActivationLink(final String rawEmail) {
+		accountRepository.findByEmail(EmailNormalizer.normalize(rawEmail))
+				.filter(Account::isPendingActivation)
+				.ifPresent(account -> activationTokenIssuer.issue(account, Instant.now(clock)));
+	}
 
 	@Transactional
 	public void activate(final String rawToken) {

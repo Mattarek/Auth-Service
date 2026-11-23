@@ -27,4 +27,10 @@ class AccountController {
 	void activate(@Valid @RequestBody final ActivateAccountRequest request) {
 		activationService.activate(request.token());
 	}
+
+	@PostMapping("/activation/resend")
+	@ResponseStatus(HttpStatus.ACCEPTED)
+	void resendActivationLink(@Valid @RequestBody final ResendActivationRequest request) {
+		activationService.resendActivationLink(request.email());
+	}
 }

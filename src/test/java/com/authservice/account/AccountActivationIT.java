@@ -32,16 +32,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class AccountActivationIT {
 	private static final String PASSWORD = "correcthorse1";
+
 	@Autowired
 	private MockMvc mockMvc;
+
 	@Autowired
 	private RegistrationService registrationService;
+
 	@Autowired
 	private AccountRepository accountRepository;
+
 	@Autowired
 	private OneTimeTokenRepository oneTimeTokenRepository;
+
 	@Autowired
 	private TokenGenerator tokenGenerator;
+
 	@Autowired
 	private MockNotificationClient notificationClient;
 
@@ -55,8 +61,10 @@ class AccountActivationIT {
 		// given
 		final Account account = registrationService.register("activate-it@example.com", PASSWORD);
 		final String token = sentActivationToken();
+
 		// when
 		final ResultActions result = activate(token);
+
 		// then
 		result.andExpect(status().isNoContent());
 		assertThat(accountRepository.findById(account.getId()))
@@ -69,8 +77,10 @@ class AccountActivationIT {
 		registrationService.register("reuse-it@example.com", PASSWORD);
 		final String token = sentActivationToken();
 		activate(token).andExpect(status().isNoContent());
+
 		// when
 		final ResultActions result = activate(token);
+
 		// then
 		result.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("TOKEN_INVALID"));
@@ -84,11 +94,50 @@ class AccountActivationIT {
 		final Instant issuedAt = Instant.now().minus(Duration.ofHours(25));
 		oneTimeTokenRepository.save(OneTimeToken.issue(
 				account, TokenPurpose.ACTIVATION, expiredToken.hash(), issuedAt, Duration.ofHours(24)));
+
 		// when
 		final ResultActions result = activate(expiredToken.rawValue());
+
 		// then
 		result.andExpect(status().isGone())
 				.andExpect(jsonPath("$.code").value("TOKEN_EXPIRED"));
+	}
+
+	@Test
+	void shouldSendNewLinkAndInvalidatePreviousToken_whenResendIsRequested() throws Exception {
+		// given
+		registrationService.register("resend-it@example.com", PASSWORD);
+		final String previousToken = sentActivationToken();
+		notificationClient.clear();
+
+		// when
+		final ResultActions result = resend("resend-it@example.com");
+
+		// then
+		result.andExpect(status().isAccepted());
+		final String newToken = sentActivationToken();
+		activate(previousToken).andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("TOKEN_INVALID"));
+		activate(newToken).andExpect(status().isNoContent());
+	}
+
+	@Test
+	void shouldReturnSameResponseWithoutSendingAnything_whenEmailIsUnknown() throws Exception {
+
+		// when
+		final ResultActions result = resend("nobody-it@example.com");
+
+		// then
+		result.andExpect(status().isAccepted());
+		assertThat(notificationClient.sentNotifications()).isEmpty();
+	}
+
+	private ResultActions resend(final String email) throws Exception {
+		return mockMvc.perform(post("/api/v1/accounts/activation/resend")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"email": "%s"}
+						""".formatted(email)));
 	}
 
 	private String sentActivationToken() {
