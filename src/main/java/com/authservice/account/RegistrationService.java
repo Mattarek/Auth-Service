@@ -38,7 +38,8 @@ public class RegistrationService {
 	}
 
 	private void validatePassword(final String rawPassword, final String email) {
-		final List<FieldViolation> violations = passwordPolicy.validate(rawPassword, email).stream()
+		final List<FieldViolation> violations = passwordPolicy.validate(rawPassword, email)
+				.stream()
 				.map(message -> new FieldViolation(PASSWORD_FIELD, message))
 				.toList();
 		if (!violations.isEmpty()) {

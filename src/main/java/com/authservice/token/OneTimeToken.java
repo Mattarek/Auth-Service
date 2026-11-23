@@ -39,13 +39,19 @@ public class OneTimeToken {
 	private Instant usedAt;
 	private Instant createdAt;
 
-	public static OneTimeToken issue(final Account account, final TokenPurpose purpose, final String tokenHash,
-									 final Instant now, final Duration validity) {
+	public static OneTimeToken issue(
+			final Account account,
+			final TokenPurpose purpose,
+			final String tokenHash,
+			final Instant now,
+			final Duration validity
+	) {
 		Objects.requireNonNull(account, "account must not be null");
 		Objects.requireNonNull(purpose, "purpose must not be null");
 		Objects.requireNonNull(tokenHash, "tokenHash must not be null");
 		Objects.requireNonNull(now, "now must not be null");
 		Objects.requireNonNull(validity, "validity must not be null");
+
 		final OneTimeToken token = new OneTimeToken();
 		token.account = account;
 		token.purpose = purpose;
