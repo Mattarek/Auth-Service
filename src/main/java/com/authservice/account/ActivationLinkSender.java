@@ -15,13 +15,16 @@ class ActivationLinkSender {
 	private final NotificationClient notificationClient;
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-	void onAccountRegistered(final AccountRegisteredEvent accountRegisteredEvent) {
+	void onActivationTokenIssued(final ActivationTokenIssuedEvent event) {
 		try {
-			notificationClient.send(new ActivationLinkNotification(
-					accountRegisteredEvent.email(),
-					accountRegisteredEvent.activationToken()));
+			notificationClient.send(
+					new ActivationLinkNotification(
+							event.email(),
+							event.activationToken()
+					)
+			);
 		} catch (final RuntimeException ex) {
-			log.error("Failed to send activation link for account {}", accountRegisteredEvent.accountId(), ex);
+			log.error("Failed to send activation link for account {}", event.accountId(), ex);
 		}
 	}
 }

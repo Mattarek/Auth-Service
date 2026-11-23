@@ -20,6 +20,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,24 +30,40 @@ class ActivationServiceTest {
 	private static final String RAW_TOKEN = "raw-token";
 	private static final String TOKEN_HASH = "token-hash";
 	private static final Duration VALIDITY = Duration.ofHours(24);
+
+	@Mock
+	private AccountRepository accountRepository;
+
 	@Mock
 	private OneTimeTokenRepository oneTimeTokenRepository;
+
+	@Mock
+	private ActivationTokenIssuer activationTokenIssuer;
+
 	@Mock
 	private TokenGenerator tokenGenerator;
+
 	private ActivationService activationService;
 
 	@BeforeEach
 	void setUp() {
-		activationService = new ActivationService(oneTimeTokenRepository, tokenGenerator, Clock.fixed(NOW, ZoneOffset.UTC));
-		when(tokenGenerator.hash(RAW_TOKEN)).thenReturn(TOKEN_HASH);
+		activationService = new ActivationService(
+				accountRepository,
+				oneTimeTokenRepository,
+				activationTokenIssuer,
+				tokenGenerator,
+				Clock.fixed(NOW, ZoneOffset.UTC)
+		);
 	}
 
 	@Test
 	void shouldActivateAccountAndMarkTokenUsed_whenTokenIsValid() {
 		// given
 		final OneTimeToken token = givenStoredToken(NOW.minus(Duration.ofHours(1)));
+
 		// when
 		activationService.activate(RAW_TOKEN);
+
 		// then
 		assertThat(token.getAccount().getStatus()).isEqualTo(AccountStatus.ACTIVE);
 		assertThat(token.getUsedAt()).isEqualTo(NOW);
@@ -54,11 +72,14 @@ class ActivationServiceTest {
 	@Test
 	void shouldRejectAsInvalid_whenTokenIsUnknown() {
 		// given
+		when(tokenGenerator.hash(RAW_TOKEN)).thenReturn(TOKEN_HASH);
 		when(oneTimeTokenRepository.findByTokenHashAndPurpose(TOKEN_HASH, TokenPurpose.ACTIVATION))
 				.thenReturn(Optional.empty());
+
 		// when
 		final BusinessException exception = catchThrowableOfType(BusinessException.class,
 				() -> activationService.activate(RAW_TOKEN));
+
 		// then
 		assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.TOKEN_INVALID);
 	}
@@ -68,9 +89,11 @@ class ActivationServiceTest {
 		// given
 		final OneTimeToken token = givenStoredToken(NOW.minus(Duration.ofHours(1)));
 		token.markUsed(NOW.minus(Duration.ofMinutes(30)));
+
 		// when
 		final BusinessException exception = catchThrowableOfType(BusinessException.class,
 				() -> activationService.activate(RAW_TOKEN));
+
 		// then
 		assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.TOKEN_INVALID);
 	}
@@ -79,18 +102,60 @@ class ActivationServiceTest {
 	void shouldRejectAsExpired_whenValidityHasPassed() {
 		// given
 		final OneTimeToken token = givenStoredToken(NOW.minus(VALIDITY));
+
 		// when
 		final BusinessException exception = catchThrowableOfType(BusinessException.class,
 				() -> activationService.activate(RAW_TOKEN));
+
 		// then
 		assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.TOKEN_EXPIRED);
 		assertThat(token.isUsed()).isFalse();
 		assertThat(token.getAccount().getStatus()).isEqualTo(AccountStatus.PENDING_ACTIVATION);
 	}
 
+	@Test
+	void shouldIssueNewActivationToken_whenResendIsRequestedForPendingAccount() {
+		// given
+		final Account account = Account.register("jan@example.com", "hash", NOW);
+		when(accountRepository.findByEmail("jan@example.com")).thenReturn(Optional.of(account));
+
+		// when
+		activationService.resendActivationLink("  JAN@example.com ");
+
+		// then
+		verify(activationTokenIssuer).issue(account, NOW);
+	}
+
+	@Test
+	void shouldDoNothing_whenResendIsRequestedForActiveAccount() {
+		// given
+		final Account account = Account.register("jan@example.com", "hash", NOW);
+		account.activate(NOW);
+		when(accountRepository.findByEmail("jan@example.com")).thenReturn(Optional.of(account));
+
+		// when
+		activationService.resendActivationLink("jan@example.com");
+
+		// then
+		verifyNoInteractions(activationTokenIssuer);
+	}
+
+	@Test
+	void shouldDoNothing_whenResendIsRequestedForUnknownEmail() {
+		// given
+		when(accountRepository.findByEmail("nobody@example.com")).thenReturn(Optional.empty());
+
+		// when
+		activationService.resendActivationLink("nobody@example.com");
+
+		// then
+		verifyNoInteractions(activationTokenIssuer);
+	}
+
 	private OneTimeToken givenStoredToken(final Instant issuedAt) {
 		final Account account = Account.register("jan@example.com", "hash", issuedAt);
 		final OneTimeToken token = OneTimeToken.issue(account, TokenPurpose.ACTIVATION, TOKEN_HASH, issuedAt, VALIDITY);
+		when(tokenGenerator.hash(RAW_TOKEN)).thenReturn(TOKEN_HASH);
 		when(oneTimeTokenRepository.findByTokenHashAndPurpose(TOKEN_HASH, TokenPurpose.ACTIVATION))
 				.thenReturn(Optional.of(token));
 		return token;

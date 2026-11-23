@@ -63,10 +63,14 @@ public class Account {
 
 	public void activate(final Instant now) {
 		Objects.requireNonNull(now, "now must not be null");
-		if (status != AccountStatus.PENDING_ACTIVATION) {
+		if (!isPendingActivation()) {
 			throw new IllegalStateException("Only an account pending activation can be activated");
 		}
 		status = AccountStatus.ACTIVE;
 		updatedAt = now;
+	}
+
+	public boolean isPendingActivation() {
+		return status == AccountStatus.PENDING_ACTIVATION;
 	}
 }

@@ -25,7 +25,7 @@ public class SecurityConfig {
 				.formLogin(AbstractHttpConfigurer::disable)
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(
-						auth -> auth.requestMatchers(HttpMethod.POST, "/api/v1/accounts", "/api/v1/accounts/activation")
+						auth -> auth.requestMatchers(HttpMethod.POST, "/api/v1/accounts", "/api/v1/accounts/activation", "/api/v1/accounts/activation/resend")
 								.permitAll()
 								.anyRequest()
 								.denyAll()

@@ -14,7 +14,7 @@ import java.time.Instant;
 
 @Component
 @RequiredArgsConstructor
-public class AcctivationTokenIssuer {
+class ActivationTokenIssuer {
 	private final OneTimeTokenRepository oneTimeTokenRepository;
 	private final TokenGenerator tokenGenerator;
 	private final TokenProperties tokenProperties;
