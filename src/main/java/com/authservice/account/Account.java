@@ -11,6 +11,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.UuidGenerator;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
@@ -59,6 +60,34 @@ public class Account {
 		account.createdAt = now;
 		account.updatedAt = now;
 		return account;
+	}
+
+	public boolean isLockedAt(final Instant now) {
+		return lockedUntil != null && now.isBefore(lockedUntil);
+	}
+
+	public void registerFailedLogin(final Instant now, final int maxFailedAttempts, final Duration lockDuration) {
+		Objects.requireNonNull(now, "now must not be null");
+		Objects.requireNonNull(lockDuration, "lockDuration must not be null");
+		failedLoginAttempts++;
+
+		if (failedLoginAttempts >= maxFailedAttempts) {
+			lockedUntil = now.plus(lockDuration);
+			failedLoginAttempts = 0;
+		}
+
+		updatedAt = now;
+	}
+
+	public void registerSuccessfulLogin(final Instant now) {
+		Objects.requireNonNull(now, "now must not be null");
+		if (failedLoginAttempts == 0 && lockedUntil == null) {
+			return;
+		}
+
+		failedLoginAttempts = 0;
+		lockedUntil = null;
+		updatedAt = now;
 	}
 
 	public void activate(final Instant now) {
