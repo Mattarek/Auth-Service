@@ -15,8 +15,12 @@ public class PasswordPolicy {
 		final List<String> violations = new ArrayList<>();
 
 		if (password.length() < properties.minLength() || password.length() > properties.maxLength()) {
-			violations.add("must be between %d and %d characters".formatted(properties.minLength(),
-					properties.maxLength()));
+			violations.add(
+					"must be between %d and %d characters".formatted(
+							properties.minLength(),
+							properties.maxLength()
+					)
+			);
 		}
 		if (properties.requireLetter() && password.chars().noneMatch(Character::isLetter)) {
 			violations.add("must contain at least one letter");
